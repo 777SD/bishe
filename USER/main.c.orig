@@ -1,0 +1,157 @@
+#include "led.h"
+#include "delay.h"
+#include "key.h"
+#include "sys.h"
+#include "usart.h"
+#include "timer2.h"
+#include "timer3.h"
+#include "hc_sr04.h"
+#include "usart3.h"
+#include "rc522.h"
+#include "iic.h"
+#include "adc.h"
+#include "gy906.h"
+#include "bmp.h"
+#include "bsp_oled_iic.h"
+
+#include <stdio.h>
+#include <string.h> // 添加包含 string.h 头文件
+#include "max30102.h"
+
+
+void OLED_Interface(void);
+uint8_t Revolve_Flag=0;
+uint8_t Stop_Flag=0;
+int16_t Servo_Speed=50;
+int main(void)
+{
+    /////////////////////////////////
+    delay_init();	    	 //延时函数初始化
+    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4); 	 //设置NVIC中断分组2:2位抢占优先级，2位响应优先级
+    uart_init(115200);	 //串口初始化为115200
+//    LED_Init();
+//    Adc_Init();
+    OLED_Init();
+//    Mlx96014_Configuration();
+//   TIM3_Int_Init(100-1,72-1);
+//    max30102_init();
+    KEY_Init();
+    EXTIX_Init();
+    TIM3_PWM_Init(999,7199,1,RCC_APB2Periph_GPIOA,GPIOA,GPIO_Pin_6);
+    TIM3_PWM_Init(999,7199,2,RCC_APB2Periph_GPIOA,GPIOA,GPIO_Pin_7);
+    TIM2_Int_Init(4999,7199);//500ms
+    OLED_Interface();
+
+    while(1)
+    {
+        KeyScan();
+    }
+
+}
+
+
+void OLED_Interface(void)
+{
+    oled_ShowCHinese(0,0,27);//模
+    oled_ShowCHinese(16,0,28);//式
+    OLED_ShowChar(32,0,':',16);
+
+    oled_ShowCHinese(0,2,32);//速
+    oled_ShowCHinese(16,2,33);//度
+    OLED_ShowChar(32,2,':',16);
+}
+
+void CalcuSpeed(void)
+{
+            if(isKey1)//按键1按下
+        {
+            isKey1=0;
+            if(!Stop_Flag)
+            {
+                Stop_Flag=!Stop_Flag;
+                TIM_SetCompare1(TIM3,0);
+                TIM_SetCompare2(TIM3,100);
+                oled_ShowCHinese(48,0,29);//正
+                oled_ShowCHinese(64,0,31);//转
+            }
+            else if(Stop_Flag)
+            {
+                Stop_Flag=!Stop_Flag;
+                Servo_Speed=50;
+                TIM_SetCompare1(TIM3,0);
+                TIM_SetCompare2(TIM3,0);
+                oled_ShowCHinese(48,0,34);//停
+                oled_ShowCHinese(64,0,31);//转
+            }
+        }
+        else if(isKey2)//按键2按下
+        {
+            isKey2=0;
+            if(!Revolve_Flag)
+            {
+                Revolve_Flag=!Revolve_Flag;
+                TIM_SetCompare1(TIM3,100);
+                TIM_SetCompare2(TIM3,0);
+                oled_ShowCHinese(48,0,30);//反
+                oled_ShowCHinese(64,0,31);//转
+            }
+            else if(Revolve_Flag)
+            {
+                Revolve_Flag=!Revolve_Flag;
+                TIM_SetCompare1(TIM3,0);
+                TIM_SetCompare2(TIM3,100);
+                oled_ShowCHinese(48,0,29);//正
+                oled_ShowCHinese(64,0,31);//转
+            }
+        }
+        else if(isKey3)//按键3按下
+        {
+            isKey3=0;
+            Servo_Speed+=50;
+            if(Servo_Speed>=500) Servo_Speed=500;
+            if(Servo_Speed<=0) Servo_Speed=0;
+            
+            if(Revolve_Flag)//反转
+            {
+                TIM_SetCompare1(TIM3,Servo_Speed);
+                TIM_SetCompare2(TIM3,0);
+                oled_ShowCHinese(48,0,30);//反
+                oled_ShowCHinese(64,0,31);//转
+            }
+            else
+            {
+                TIM_SetCompare1(TIM3,0);
+                TIM_SetCompare2(TIM3,Servo_Speed);
+                oled_ShowCHinese(48,0,29);//正
+                oled_ShowCHinese(64,0,31);//转
+            }
+        }
+        
+        else if(isKey4)//按键4按下
+        {
+            isKey4=0;
+            Servo_Speed-=50;
+            if(Servo_Speed>=500) Servo_Speed=500;
+            if(Servo_Speed<=0) Servo_Speed=0;
+            
+            if(Revolve_Flag)//反转
+            {
+                TIM_SetCompare1(TIM3,Servo_Speed);
+                TIM_SetCompare2(TIM3,0);
+                oled_ShowCHinese(48,0,30);//反
+                oled_ShowCHinese(64,0,31);//转
+            }
+            else
+            {
+                TIM_SetCompare1(TIM3,0);
+                TIM_SetCompare2(TIM3,Servo_Speed);
+                oled_ShowCHinese(48,0,29);//正
+                oled_ShowCHinese(64,0,31);//转
+            }
+        }
+        
+      //  OLED_ShowChar(64,2,'0',16);
+        oled_ShowNum(64,2,Servo_Count,3,16);
+        //delay_ms(100);
+    
+}

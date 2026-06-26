@@ -1,0 +1,106 @@
+#include "led.h"
+
+//////////////////////////////////////////////////////////////////////////////////	 
+//本程序只供学习使用，未经作者许可，不得用于其它任何用途
+//ALIENTEK 精英STM32开发板
+//LED驱动代码	   
+//正点原子@ALIENTEK
+//技术论坛:www.openedv.com
+//修改日期:2012/9/2
+//版本：V1.0
+//版权所有，盗版必究。
+//Copyright(C) 广州市星翼电子科技有限公司 2009-2019
+//All rights reserved									  
+////////////////////////////////////////////////////////////////////////////////// 	   
+
+//初始化PB5和PE5为输出口.并使能这两个口的时钟		    
+//LED IO初始化
+void LED_Init(void)
+{
+ 
+ GPIO_InitTypeDef  GPIO_InitStructure;
+ 	
+ RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC|RCC_APB2Periph_GPIOB, ENABLE);	 //使能PB,PE端口时钟
+	
+ GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;				 //LED0-->PB.5 端口配置
+ GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP; 		 //推挽输出
+ GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;		 //IO口速度为50MHz
+ GPIO_Init(GPIOC, &GPIO_InitStructure);					 //根据设定参数初始化GPIOB.5
+ GPIO_ResetBits(GPIOC,GPIO_Pin_7);						 //PB.5 输出高
+
+ GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;	    		 //LED1-->PE.5 端口配置, 推挽输出
+GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+ GPIO_Init(GPIOB, &GPIO_InitStructure);	  				 //推挽输出 ，IO口速度为50MHz
+ GPIO_SetBits(GPIOB,GPIO_Pin_5); 						 //PE.5 输出高 
+}
+
+ 
+void Holl_Init(void)
+{
+     GPIO_InitTypeDef  GPIO_InitStructure;
+ 	
+     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);	 //使能PB,PE端口时钟
+        
+     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4|GPIO_Pin_5;				 //LED0-->PB.5 端口配置
+     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING; 		 //推挽输出
+     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;		 //IO口速度为50MHz
+     GPIO_Init(GPIOA, &GPIO_InitStructure);					 //根据设定参数初始化GPIOB.5
+}
+
+void EXTIX_Init(void)
+{
+ 
+   	EXTI_InitTypeDef EXTI_InitStructure;
+ 	  NVIC_InitTypeDef NVIC_InitStructure;
+
+    Holl_Init();	 //	按键端口初始化
+
+  	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO,ENABLE);	//使能复用功能时钟
+
+   //中断线以及中断初始化配置 下降沿触发
+  	GPIO_EXTILineConfig(GPIO_PortSourceGPIOA,GPIO_PinSource6);
+  	EXTI_InitStructure.EXTI_Line=EXTI_Line6;
+  	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;	
+  	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
+  	EXTI_Init(&EXTI_InitStructure);	  	//根据EXTI_InitStruct中指定的参数初始化外设EXTI寄存器
+
+   //中断线以及中断初始化配置  下降沿触发
+  	GPIO_EXTILineConfig(GPIO_PortSourceGPIOA,GPIO_PinSource7);
+  	EXTI_InitStructure.EXTI_Line=EXTI_Line7;
+    EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;	
+  	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
+  	EXTI_Init(&EXTI_InitStructure);	  	//根据EXTI_InitStruct中指定的参数初始化外设EXTI寄存器
+
+
+  	NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn;			//使能按键KEY1所在的外部中断通道
+  	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x02;	//抢占优先级2 
+  	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x00;					//子优先级1 
+  	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;								//使能外部中断通道
+  	NVIC_Init(&NVIC_InitStructure);  	  //根据NVIC_InitStruct中指定的参数初始化外设NVIC寄存器
+
+ 
+}
+
+int16_t Servo_Count=0;
+//外部中断5-9服务程序 
+void EXTI9_5_IRQHandler(void)
+{
+    u32 Temp = 0x00;
+    Temp = EXTI->PR;       //取读是那个引脚的中断
+      switch(Temp)
+  {
+    case Exti_From_Pin6:
+      EXTI_ClearITPendingBit(EXTI_Line8);
+      break;
+    case Exti_From_Pin7:
+      if(Sys_Status < MAX_STATUS)
+      {
+        Sys_Status ++;
+      }
+      EXTI_ClearITPendingBit(EXTI_Line9);
+      break;
+    default:break;
+  }
+
+}

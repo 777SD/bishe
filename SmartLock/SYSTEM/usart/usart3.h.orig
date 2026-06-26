@@ -1,0 +1,18 @@
+#ifndef __USART3_H
+#define __USART3_H
+#include "stdio.h"	
+#include "sys.h" 
+
+
+// 接收数组大小
+
+
+void Usart3_Init(unsigned int baud);
+void Usart_SendByte( USART_TypeDef * pUSARTx, uint8_t ch);
+void Usart_SendBytes( USART_TypeDef * pUSARTx, uint8_t *Buffer, uint8_t Length);
+void Usart_SendString( USART_TypeDef * pUSARTx, char *str);
+uint16_t Crc16(uint8_t *ptr, uint32_t len);
+void SnowRx_Handel(void);
+#endif
+
+
